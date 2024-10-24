@@ -1,3 +1,4 @@
+import React from "react";
 import NotificationDropdown from "./NotificationDropdown";
 
 import { useEffect, useState } from "react";
@@ -7,28 +8,38 @@ type NotificationType = {
   message: string;
 };
 
-export default function Naas({ userHash }: { userHash: string }) {
+type NaasProps = {
+  userHash: string;
+  websocketUrl: string;
+};
+
+export default function Naas({ userHash, websocketUrl }: NaasProps) {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
-    const eventSource = new EventSource("/sse");
-    eventSource.onmessage = async (event: MessageEvent<string>) => {
-      setNotifications((notifications) =>
-        notifications.concat(JSON.parse(event.data))
-      );
+    const ws = new WebSocket(websocketUrl);
+    ws.onopen = () => {
+      console.log("ws connected");
+      setWsConnected(true);
     };
 
-    eventSource.onerror = function (error) {
-      console.error("EventSource failed:", error);
+    ws.onmessage = ({ data }) => {
+      setNotifications((notifications) =>
+        notifications.concat(JSON.parse(data))
+      );
+      console.log("Received message:", data);
     };
   }, []);
 
   return (
-    <>
-      <NotificationDropdown
-        notifications={notifications}
-        setNotifications={setNotifications}
-      />
-    </>
+    wsConnected && (
+      <>
+        <NotificationDropdown
+          notifications={notifications}
+          setNotifications={setNotifications}
+        />
+      </>
+    )
   );
 }
