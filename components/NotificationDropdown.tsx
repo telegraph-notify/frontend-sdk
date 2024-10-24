@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import DeleteIcon from "@mui/icons-material/Delete";
+import React from "react";
 
 type NotificationType = {
   id: number;
