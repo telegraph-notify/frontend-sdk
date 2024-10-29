@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   IconButton,
   Menu,
@@ -6,39 +6,84 @@ import {
   Badge,
   ListItemText,
   ListItemSecondaryAction,
+  Box,
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import DeleteIcon from "@mui/icons-material/Delete";
-import React from "react";
 
-type NotificationType = {
-  id: number;
-  message: string;
-};
+import { NotificationType } from "../types/index";
+
+interface NotificationDropdownProps {
+  userHash: string;
+  notifications: NotificationType[];
+  setNotifications: React.Dispatch<React.SetStateAction<NotificationType[]>>;
+  wsController: WebSocket;
+}
 
 const NotificationDropdown = ({
+  userHash,
   notifications,
   setNotifications,
-}: {
-  notifications: NotificationType[];
-  setNotifications;
-}) => {
-  const [anchorEl, setAnchorEl] = useState(null);
+  wsController,
+}: NotificationDropdownProps) => {
+  const [anchorEl, setAnchorEl] = useState<(EventTarget & Element) | null>(
+    null
+  );
 
   const open = Boolean(anchorEl);
 
-  const handleClick = (event) => {
+  const handleOpenBell = (event: React.SyntheticEvent) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
+  const handleCloseBell = () => {
     setAnchorEl(null);
   };
 
-  const handleDelete = (id: number) => {
-    setNotifications(
-      notifications.filter((notification) => notification.id !== id)
+  const handleDeleteMessage = (
+    event: React.SyntheticEvent,
+    notification_id: string
+  ) => {
+    event.stopPropagation();
+    console.log("item deleted");
+
+    wsController.send(
+      JSON.stringify({
+        action: "updateNotification",
+        payload: { notification_id, userHash, status: "delete" },
+      })
     );
+
+    setNotifications((prevState) => {
+      return prevState.filter(
+        (notification) => notification.notification_id !== notification_id
+      );
+    });
+  };
+
+  const handleReadMessage = (
+    event: React.SyntheticEvent,
+    notification_id: string
+  ) => {
+    event.stopPropagation();
+    console.log("item clicked");
+
+    wsController.send(
+      JSON.stringify({
+        action: "updateNotification",
+        payload: { notification_id, userHash, status: "read" },
+      })
+    );
+
+    setNotifications((prevState) => {
+      return prevState.map((notification) => {
+        if (notification.notification_id === notification_id) {
+          return { ...notification, status: "read" };
+        } else {
+          return notification;
+        }
+      });
+    });
   };
 
   return (
@@ -48,14 +93,19 @@ const NotificationDropdown = ({
         aria-controls={open ? "notification-menu" : undefined}
         aria-haspopup="true"
         aria-expanded={open ? "true" : undefined}
-        onClick={handleClick}
+        onClick={handleOpenBell}
         sx={{
           "&:focus": {
             outline: "none",
           },
         }}
       >
-        <Badge badgeContent={notifications.length} color="error">
+        <Badge
+          badgeContent={
+            notifications.filter((note) => note.status === "unread").length
+          }
+          color="error"
+        >
           <NotificationsIcon />
         </Badge>
       </IconButton>
@@ -64,7 +114,7 @@ const NotificationDropdown = ({
         id="notification-menu"
         anchorEl={anchorEl}
         open={open}
-        onClose={handleClose}
+        onClose={handleCloseBell}
         PaperProps={{
           style: {
             maxHeight: 350,
@@ -84,13 +134,33 @@ const NotificationDropdown = ({
           <MenuItem>No new notifications</MenuItem>
         ) : (
           notifications.map((note) => (
-            <MenuItem key={note.id}>
+            <MenuItem
+              key={note.notification_id}
+              id={note.notification_id}
+              onClick={(event) =>
+                handleReadMessage(event, note.notification_id)
+              }
+            >
               <ListItemText primary={note.message} />
               <ListItemSecondaryAction>
+                {note.status === "unread" && (
+                  <Box
+                    sx={{
+                      display: "inline-flex",
+                      width: 5,
+                      height: 5,
+                      backgroundColor: "red",
+                      borderRadius: "50%",
+                      marginLeft: 1,
+                    }}
+                  />
+                )}
                 <IconButton
                   edge="end"
                   aria-label="delete"
-                  onClick={() => handleDelete(note.id)}
+                  onClick={(event) =>
+                    handleDeleteMessage(event, note.notification_id)
+                  }
                 >
                   <DeleteIcon />
                 </IconButton>
