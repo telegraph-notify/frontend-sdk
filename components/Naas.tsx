@@ -18,7 +18,9 @@ export default function Naas({ userHash, websocketUrl }: NaasProps) {
   const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
-    const ws = new WebSocket(websocketUrl);
+    const ws = new WebSocket(
+      websocketUrl + "?hash=" + encodeURIComponent(userHash)
+    );
     ws.onopen = () => {
       console.log("ws connected");
       setWsConnected(true);
