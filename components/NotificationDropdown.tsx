@@ -7,92 +7,63 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Box,
+  Checkbox,
+  Typography,
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import DeleteIcon from "@mui/icons-material/Delete";
+import SettingsIcon from "@mui/icons-material/Settings";
+import CloseIcon from "@mui/icons-material/Close";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 import { NotificationType } from "../types/index";
 
 interface NotificationDropdownProps {
-  userHash: string;
   notifications: NotificationType[];
-  setNotifications: React.Dispatch<React.SetStateAction<NotificationType[]>>;
-  wsController: WebSocket;
+  handleToggleInApp: (event: React.SyntheticEvent) => void;
+  handleToggleEmail: (event: React.SyntheticEvent) => void;
+  handleDeleteMessage: (
+    event: React.SyntheticEvent,
+    notification_id: string
+  ) => void;
+  handleReadMessage: (
+    event: React.SyntheticEvent,
+    notification_id: string
+  ) => void;
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
 }
 
 const NotificationDropdown = ({
-  userHash,
   notifications,
-  setNotifications,
-  wsController,
+  handleToggleInApp,
+  handleToggleEmail,
+  inAppEnabled,
+  emailEnabled,
+  handleDeleteMessage,
+  handleReadMessage,
 }: NotificationDropdownProps) => {
-  const [anchorEl, setAnchorEl] = useState<(EventTarget & Element) | null>(
-    null
-  );
+  const [bellAnchorEl, setBellAnchorEl] = useState<null | HTMLElement>(null);
+  const [isSettingsView, setIsSettingsView] = useState(false);
 
-  const open = Boolean(anchorEl);
+  const isBellOpen = Boolean(bellAnchorEl);
 
   const handleOpenBell = (event: React.SyntheticEvent) => {
-    setAnchorEl(event.currentTarget);
+    setBellAnchorEl(event.currentTarget as HTMLElement);
   };
 
   const handleCloseBell = () => {
-    setAnchorEl(null);
-  };
-
-  const handleDeleteMessage = (
-    event: React.SyntheticEvent,
-    notification_id: string
-  ) => {
-    event.stopPropagation();
-    console.log("item deleted");
-
-    wsController.send(
-      JSON.stringify({
-        action: "updateNotification",
-        payload: { notification_id, userHash, status: "delete" },
-      })
-    );
-
-    setNotifications((prevState) => {
-      return prevState.filter(
-        (notification) => notification.notification_id !== notification_id
-      );
-    });
-  };
-
-  const handleReadMessage = (
-    event: React.SyntheticEvent,
-    notification_id: string
-  ) => {
-    event.stopPropagation();
-    console.log("item clicked");
-
-    wsController.send(
-      JSON.stringify({
-        action: "updateNotification",
-        payload: { notification_id, userHash, status: "read" },
-      })
-    );
-
-    setNotifications((prevState) => {
-      return prevState.map((notification) => {
-        if (notification.notification_id === notification_id) {
-          return { ...notification, status: "read" };
-        } else {
-          return notification;
-        }
-      });
-    });
+    setBellAnchorEl(null);
+    setIsSettingsView(false); // Reset to notifications view on close
   };
 
   return (
     <div>
       <IconButton
         color="inherit"
-        aria-controls={open ? "notification-menu" : undefined}
+        aria-controls={isBellOpen ? "notification-menu" : undefined}
         aria-haspopup="true"
-        aria-expanded={open ? "true" : undefined}
+        aria-expanded={isBellOpen ? "true" : undefined}
         onClick={handleOpenBell}
         sx={{
           "&:focus": {
@@ -112,8 +83,8 @@ const NotificationDropdown = ({
 
       <Menu
         id="notification-menu"
-        anchorEl={anchorEl}
-        open={open}
+        anchorEl={bellAnchorEl}
+        open={isBellOpen}
         onClose={handleCloseBell}
         PaperProps={{
           style: {
@@ -130,13 +101,57 @@ const NotificationDropdown = ({
           horizontal: "right",
         }}
       >
-        {notifications.length === 0 ? (
+        {/* Top row with Close and Settings icons */}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          px={2}
+          py={1}
+        >
+          {isSettingsView ? (
+            <IconButton onClick={() => setIsSettingsView(false)} edge="start">
+              <ArrowBackIcon />
+            </IconButton>
+          ) : (
+            <IconButton onClick={handleCloseBell} edge="start">
+              <CloseIcon />
+            </IconButton>
+          )}
+          <Typography
+            variant="subtitle1"
+            sx={{ flexGrow: 1, textAlign: "center" }}
+          >
+            {isSettingsView ? "Settings" : "Notifications"}
+          </Typography>
+          <IconButton
+            onClick={() => setIsSettingsView(!isSettingsView)}
+            edge="end"
+          >
+            <SettingsIcon />
+          </IconButton>
+        </Box>
+
+        {isSettingsView ? (
+          [
+            <MenuItem
+              key="in-app"
+              onClick={(event) => handleToggleInApp(event)}
+            >
+              <Checkbox checked={inAppEnabled} />
+              <ListItemText primary="In App" />
+            </MenuItem>,
+            <MenuItem key="email" onClick={(event) => handleToggleEmail(event)}>
+              <Checkbox checked={emailEnabled} />
+              <ListItemText primary="Email" />
+            </MenuItem>,
+          ]
+        ) : notifications.length === 0 ? (
           <MenuItem>No new notifications</MenuItem>
         ) : (
           notifications.map((note) => (
             <MenuItem
               key={note.notification_id}
-              id={note.notification_id}
               onClick={(event) =>
                 handleReadMessage(event, note.notification_id)
               }
