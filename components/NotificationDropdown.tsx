@@ -16,28 +16,11 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
-import { NotificationType } from "../types/index";
-
-interface NotificationDropdownProps {
-  notifications: NotificationType[];
-  handleToggleInApp: (event: React.SyntheticEvent) => void;
-  handleToggleEmail: (event: React.SyntheticEvent) => void;
-  handleDeleteMessage: (
-    event: React.SyntheticEvent,
-    notification_id: string
-  ) => void;
-  handleReadMessage: (
-    event: React.SyntheticEvent,
-    notification_id: string
-  ) => void;
-  inAppEnabled: boolean;
-  emailEnabled: boolean;
-}
+import { NotificationDropdownProps } from "../types/index";
 
 const NotificationDropdown = ({
   notifications,
-  handleToggleInApp,
-  handleToggleEmail,
+  handleToggleChannel,
   inAppEnabled,
   emailEnabled,
   handleDeleteMessage,
@@ -136,12 +119,15 @@ const NotificationDropdown = ({
           [
             <MenuItem
               key="in-app"
-              onClick={(event) => handleToggleInApp(event)}
+              onClick={(event) => handleToggleChannel(event, "in_app")}
             >
               <Checkbox checked={inAppEnabled} />
               <ListItemText primary="In App" />
             </MenuItem>,
-            <MenuItem key="email" onClick={(event) => handleToggleEmail(event)}>
+            <MenuItem
+              key="email"
+              onClick={(event) => handleToggleChannel(event, "email")}
+            >
               <Checkbox checked={emailEnabled} />
               <ListItemText primary="Email" />
             </MenuItem>,

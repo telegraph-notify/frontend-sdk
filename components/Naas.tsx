@@ -15,28 +15,44 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
   const [inAppEnabled, setInAppEnabled] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
 
-  const handleToggleInApp = (event: React.SyntheticEvent) => {
+  const handleToggleChannel = (
+    event: React.SyntheticEvent,
+    channel: string
+  ) => {
     event.stopPropagation();
-    const newStatus = !inAppEnabled;
+    const payload = { user_id, in_app: inAppEnabled, email: emailEnabled };
+    switch (channel) {
+      case "in_app":
+        payload.in_app = !inAppEnabled;
+        break;
+      case "email":
+        payload.email = !emailEnabled;
+        break;
+    }
     wsController!.send(
       JSON.stringify({
         action: "updatePreference",
-        payload: { user_id, in_app: newStatus, email: emailEnabled },
+        payload,
       })
     );
-    setInAppEnabled(newStatus);
   };
 
-  const handleToggleEmail = (event: React.SyntheticEvent) => {
-    event.stopPropagation();
-    const newStatus = !emailEnabled;
-    wsController!.send(
-      JSON.stringify({
-        action: "updatePreference",
-        payload: { user_id, in_app: inAppEnabled, email: newStatus },
-      })
-    );
-    setEmailEnabled(newStatus);
+  const updateNotification = (notification_id: string, status: string) => {
+    if (status === "read") {
+      setNotifications((prevState) =>
+        prevState.map((note) =>
+          note.notification_id === notification_id
+            ? { ...note, status: "read" }
+            : note
+        )
+      );
+    } else if (status === "delete") {
+      setNotifications((prevState) =>
+        prevState.filter(
+          (notification) => notification.notification_id !== notification_id
+        )
+      );
+    }
   };
 
   const handleDeleteMessage = (
@@ -51,12 +67,6 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
         payload: { notification_id, user_id, status: "delete" },
       })
     );
-
-    setNotifications((prevState) =>
-      prevState.filter(
-        (notification) => notification.notification_id !== notification_id
-      )
-    );
   };
 
   const handleReadMessage = (
@@ -70,14 +80,6 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
     );
 
     if (notification && notification.status === "unread") {
-      setNotifications((prevState) =>
-        prevState.map((note) =>
-          note.notification_id === notification_id
-            ? { ...note, status: "read" }
-            : note
-        )
-      );
-
       wsController!.send(
         JSON.stringify({
           action: "updateNotification",
@@ -89,11 +91,11 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
 
   useEffect(() => {
     // make ws connection with server
+
     if (websocketUrl) {
       const ws = new WebSocket(
         `${websocketUrl}?user_id=${encodeURIComponent(user_id)}`
       );
-      setWsController(ws);
 
       // set status of ws connection when ws handshake is complete
       ws.onopen = () => {
@@ -106,10 +108,24 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
             payload: { user_id },
           })
         );
+
+        // Start keep-alive interval
+        const keepAlive = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            console.log("sending ping");
+            ws.send(
+              JSON.stringify({
+                action: "initialData",
+                payload: { user_id: "ping" },
+              })
+            );
+          }
+        }, 9 * 60 * 1000); // 9 minutes
       };
 
       ws.onclose = () => {
         console.log("lost ws connection");
+        setWsConnected(false);
       };
 
       // client receives message from server
@@ -122,16 +138,20 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
             return payload.notifications.concat(notifications);
           });
         } else if (payload.topic === "preference") {
-          setInAppEnabled(payload.preferences.inapp);
-          setEmailEnabled(payload.preferences.email);
+          setInAppEnabled(payload.preference.in_app);
+          setEmailEnabled(payload.preference.email);
         } else if (payload.topic === "initial_data") {
           setInAppEnabled(payload.preference.in_app);
           setEmailEnabled(payload.preference.email);
           setNotifications((notifications) => {
             return payload.notifications.concat(notifications);
           });
+        } else if (payload.topic === "notif_updated") {
+          updateNotification(payload.notification_id, payload.status);
         }
       };
+
+      setWsController(ws);
     }
   }, []);
 
@@ -142,8 +162,7 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
           notifications={notifications}
           handleDeleteMessage={handleDeleteMessage}
           handleReadMessage={handleReadMessage}
-          handleToggleInApp={handleToggleInApp}
-          handleToggleEmail={handleToggleEmail}
+          handleToggleChannel={handleToggleChannel}
           inAppEnabled={inAppEnabled}
           emailEnabled={emailEnabled}
         />
