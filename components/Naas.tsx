@@ -143,9 +143,11 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
         } else if (payload.topic === "initial_data") {
           setInAppEnabled(payload.preference.in_app);
           setEmailEnabled(payload.preference.email);
-          setNotifications((notifications) => {
-            return payload.notifications.concat(notifications);
-          });
+          if (payload.preference.in_app) {
+            setNotifications((notifications) => {
+              return payload.notifications.concat(notifications);
+            });
+          }
         } else if (payload.topic === "notif_updated") {
           updateNotification(payload.notification_id, payload.status);
         }
