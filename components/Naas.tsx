@@ -5,10 +5,11 @@ import { NotificationType } from "../types/index";
 
 type NaasProps = {
   user_id: string;
+  userHash: string;
   websocketUrl: string | undefined;
 };
 
-export default function Naas({ user_id, websocketUrl }: NaasProps) {
+export default function Naas({ user_id, userHash, websocketUrl }: NaasProps) {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsController, setWsController] = useState<WebSocket | null>(null);
@@ -93,8 +94,11 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
     // make ws connection with server
 
     if (websocketUrl) {
+      const id = encodeURIComponent(user_id);
+      const hash = encodeURIComponent(userHash);
+
       const ws = new WebSocket(
-        `${websocketUrl}?user_id=${encodeURIComponent(user_id)}`
+        `${websocketUrl}?user_id=${id}&userHash=${hash}`
       );
 
       // set status of ws connection when ws handshake is complete
@@ -105,7 +109,7 @@ export default function Naas({ user_id, websocketUrl }: NaasProps) {
         ws.send(
           JSON.stringify({
             action: "initialData",
-            payload: { user_id },
+            payload: { user_id, userHash },
           })
         );
 
