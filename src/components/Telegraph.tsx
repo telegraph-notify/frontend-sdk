@@ -9,7 +9,7 @@ type NaasProps = {
   websocketUrl: string | undefined;
 };
 
-export default function Naas({ user_id, userHash, websocketUrl }: NaasProps) {
+export function Telegraph({ user_id, userHash, websocketUrl }: NaasProps) {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsController, setWsController] = useState<WebSocket | null>(null);
@@ -114,7 +114,7 @@ export default function Naas({ user_id, userHash, websocketUrl }: NaasProps) {
         );
 
         // Start keep-alive interval
-        const keepAlive = setInterval(() => {
+        setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             console.log("sending ping");
             ws.send(
