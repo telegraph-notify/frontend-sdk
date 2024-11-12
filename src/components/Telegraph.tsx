@@ -1,59 +1,42 @@
 import React, { useEffect, useState } from "react";
 import NotificationDropdown from "./NotificationDropdown";
-
 import { NotificationType } from "../types/index";
+import {
+  updateNotificationStatus,
+  handleReceivedData,
+} from "../utils/websocketHelpers";
 
-type NaasProps = {
+type TelegraphProps = {
   user_id: string;
   userHash: string;
   websocketUrl: string | undefined;
 };
 
-export function Telegraph({ user_id, userHash, websocketUrl }: NaasProps) {
+export function Telegraph({ user_id, userHash, websocketUrl }: TelegraphProps) {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsController, setWsController] = useState<WebSocket | null>(null);
   const [inAppEnabled, setInAppEnabled] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
 
+  const updateNotification = (notification_id: string, status: string) => {
+    setNotifications((prevNotifications) =>
+      updateNotificationStatus(prevNotifications, notification_id, status)
+    );
+  };
+
   const handleToggleChannel = (
     event: React.SyntheticEvent,
     channel: string
   ) => {
     event.stopPropagation();
-    const payload = { user_id, in_app: inAppEnabled, email: emailEnabled };
-    switch (channel) {
-      case "in_app":
-        payload.in_app = !inAppEnabled;
-        break;
-      case "email":
-        payload.email = !emailEnabled;
-        break;
-    }
-    wsController!.send(
-      JSON.stringify({
-        action: "updatePreference",
-        payload,
-      })
-    );
-  };
-
-  const updateNotification = (notification_id: string, status: string) => {
-    if (status === "read") {
-      setNotifications((prevState) =>
-        prevState.map((note) =>
-          note.notification_id === notification_id
-            ? { ...note, status: "read" }
-            : note
-        )
-      );
-    } else if (status === "delete") {
-      setNotifications((prevState) =>
-        prevState.filter(
-          (notification) => notification.notification_id !== notification_id
-        )
-      );
-    }
+    const payload: { user_id: string; [key: string]: any } = {
+      user_id,
+      in_app: inAppEnabled,
+      email: emailEnabled,
+    };
+    payload[channel] = !payload[channel];
+    wsController!.send(JSON.stringify({ action: "updatePreference", payload }));
   };
 
   const handleDeleteMessage = (
@@ -61,7 +44,6 @@ export function Telegraph({ user_id, userHash, websocketUrl }: NaasProps) {
     notification_id: string
   ) => {
     event.stopPropagation();
-
     wsController!.send(
       JSON.stringify({
         action: "updateNotification",
@@ -75,12 +57,10 @@ export function Telegraph({ user_id, userHash, websocketUrl }: NaasProps) {
     notification_id: string
   ) => {
     event.stopPropagation();
-
     const notification = notifications.find(
       (note) => note.notification_id === notification_id
     );
-
-    if (notification && notification.status === "unread") {
+    if (notification?.status === "unread") {
       wsController!.send(
         JSON.stringify({
           action: "updateNotification",
@@ -90,87 +70,65 @@ export function Telegraph({ user_id, userHash, websocketUrl }: NaasProps) {
     }
   };
 
-  useEffect(() => {
-    // make ws connection with server
+  const connectWebSocket = () => {
+    const id = encodeURIComponent(user_id);
+    const hash = encodeURIComponent(userHash);
+    const ws = new WebSocket(`${websocketUrl}?user_id=${id}&userHash=${hash}`);
 
-    if (websocketUrl) {
-      const id = encodeURIComponent(user_id);
-      const hash = encodeURIComponent(userHash);
-
-      const ws = new WebSocket(
-        `${websocketUrl}?user_id=${id}&userHash=${hash}`
+    ws.onopen = () => handleWsOpen(ws);
+    ws.onclose = handleWsClose;
+    ws.onmessage = (event) =>
+      handleReceivedData(
+        event.data,
+        setNotifications,
+        setInAppEnabled,
+        setEmailEnabled,
+        updateNotification
       );
 
-      // set status of ws connection when ws handshake is complete
-      ws.onopen = () => {
-        console.log("ws connection opened");
-        setWsConnected(true);
-        console.log("requesting initial data");
+    setWsController(ws);
+  };
+
+  const handleWsOpen = (ws: WebSocket) => {
+    console.log("WebSocket connection opened");
+    setWsConnected(true);
+    ws.send(
+      JSON.stringify({ action: "initialData", payload: { user_id, userHash } })
+    );
+    startPingInterval(ws);
+  };
+
+  const handleWsClose = () => {
+    console.log("WebSocket connection closed");
+    setWsConnected(false);
+  };
+
+  const startPingInterval = (ws: WebSocket) => {
+    setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
         ws.send(
-          JSON.stringify({
-            action: "initialData",
-            payload: { user_id, userHash },
-          })
+          JSON.stringify({ action: "ping", payload: { user_id: "ping" } })
         );
+      }
+    }, 9 * 60 * 1000); // 9 minutes
+  };
 
-        // Start keep-alive interval
-        setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            console.log("sending ping");
-            ws.send(
-              JSON.stringify({
-                action: "initialData",
-                payload: { user_id: "ping" },
-              })
-            );
-          }
-        }, 9 * 60 * 1000); // 9 minutes
-      };
-
-      ws.onclose = () => {
-        console.log("lost ws connection");
-        setWsConnected(false);
-      };
-
-      // client receives message from server
-      ws.onmessage = ({ data }) => {
-        const payload = JSON.parse(data);
-        console.log(payload);
-
-        if (payload.topic === "notification") {
-          setNotifications((notifications) => {
-            return payload.notifications.concat(notifications);
-          });
-        } else if (payload.topic === "preference") {
-          setInAppEnabled(payload.preference.in_app);
-          setEmailEnabled(payload.preference.email);
-        } else if (payload.topic === "initial_data") {
-          setInAppEnabled(payload.preference.in_app);
-          setEmailEnabled(payload.preference.email);
-          setNotifications((notifications) => {
-            return payload.notifications.concat(notifications);
-          });
-        } else if (payload.topic === "notif_updated") {
-          updateNotification(payload.notification_id, payload.status);
-        }
-      };
-
-      setWsController(ws);
+  useEffect(() => {
+    if (websocketUrl) {
+      connectWebSocket();
     }
-  }, []);
+  }, [websocketUrl]);
 
   return (
     wsConnected && (
-      <>
-        <NotificationDropdown
-          notifications={notifications}
-          handleDeleteMessage={handleDeleteMessage}
-          handleReadMessage={handleReadMessage}
-          handleToggleChannel={handleToggleChannel}
-          inAppEnabled={inAppEnabled}
-          emailEnabled={emailEnabled}
-        />
-      </>
+      <NotificationDropdown
+        notifications={notifications}
+        handleDeleteMessage={handleDeleteMessage}
+        handleReadMessage={handleReadMessage}
+        handleToggleChannel={handleToggleChannel}
+        inAppEnabled={inAppEnabled}
+        emailEnabled={emailEnabled}
+      />
     )
   );
 }
