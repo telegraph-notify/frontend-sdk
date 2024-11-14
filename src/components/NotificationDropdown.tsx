@@ -118,7 +118,7 @@ const NotificationDropdown = ({
         {isSettingsView ? (
           [
             <MenuItem
-              key="in-app"
+              key="in_app"
               onClick={(event) => handleToggleChannel(event, "in_app")}
             >
               <Checkbox checked={inAppEnabled} />
