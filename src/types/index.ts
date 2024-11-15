@@ -20,4 +20,5 @@ export type NotificationDropdownProps = {
   ) => void;
   inAppEnabled: boolean;
   emailEnabled: boolean;
+  slackEnabled: boolean;
 };
