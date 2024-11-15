@@ -25,6 +25,7 @@ export function handleReceivedData(
   setNotifications: React.Dispatch<React.SetStateAction<NotificationType[]>>,
   setInAppEnabled: React.Dispatch<React.SetStateAction<boolean>>,
   setEmailEnabled: React.Dispatch<React.SetStateAction<boolean>>,
+  setSlackEnabled: React.Dispatch<React.SetStateAction<boolean>>,
   updateNotification: (notification_id: string, status: string) => void
 ) {
   const payload = JSON.parse(data);
@@ -38,10 +39,12 @@ export function handleReceivedData(
     case "preference":
       setInAppEnabled(payload.preference.in_app);
       setEmailEnabled(payload.preference.email);
+      setSlackEnabled(payload.preference.slack);
       break;
     case "initial_data":
       setInAppEnabled(payload.preference.in_app);
       setEmailEnabled(payload.preference.email);
+      setSlackEnabled(payload.preference.slack);
       setNotifications((notifications) =>
         payload.notifications.concat(notifications)
       );

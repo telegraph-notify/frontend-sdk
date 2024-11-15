@@ -23,6 +23,7 @@ const NotificationDropdown = ({
   handleToggleChannel,
   inAppEnabled,
   emailEnabled,
+  slackEnabled,
   handleDeleteMessage,
   handleReadMessage,
 }: NotificationDropdownProps) => {
@@ -37,7 +38,7 @@ const NotificationDropdown = ({
 
   const handleCloseBell = () => {
     setBellAnchorEl(null);
-    setIsSettingsView(false); // Reset to notifications view on close
+    setIsSettingsView(false);
   };
 
   return (
@@ -84,7 +85,6 @@ const NotificationDropdown = ({
           horizontal: "right",
         }}
       >
-        {/* Top row with Close and Settings icons */}
         <Box
           display="flex"
           justifyContent="space-between"
@@ -130,6 +130,13 @@ const NotificationDropdown = ({
             >
               <Checkbox checked={emailEnabled} />
               <ListItemText primary="Email" />
+            </MenuItem>,
+            <MenuItem
+              key="slack"
+              onClick={(event) => handleToggleChannel(event, "slack")}
+            >
+              <Checkbox checked={slackEnabled} />
+              <ListItemText primary="Slack" />
             </MenuItem>,
           ]
         ) : notifications.length === 0 ? (

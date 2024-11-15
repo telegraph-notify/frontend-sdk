@@ -18,6 +18,7 @@ export function Telegraph({ user_id, userHash, websocketUrl }: TelegraphProps) {
   const [wsController, setWsController] = useState<WebSocket | null>(null);
   const [inAppEnabled, setInAppEnabled] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const [slackEnabled, setSlackEnabled] = useState(false);
 
   const updateNotification = (notification_id: string, status: string) => {
     setNotifications((prevNotifications) =>
@@ -34,6 +35,7 @@ export function Telegraph({ user_id, userHash, websocketUrl }: TelegraphProps) {
       user_id,
       in_app: inAppEnabled,
       email: emailEnabled,
+      slack: slackEnabled,
     };
     payload[channel] = !payload[channel];
     wsController!.send(JSON.stringify({ action: "updatePreference", payload }));
@@ -83,6 +85,7 @@ export function Telegraph({ user_id, userHash, websocketUrl }: TelegraphProps) {
         setNotifications,
         setInAppEnabled,
         setEmailEnabled,
+        setSlackEnabled,
         updateNotification
       );
 
@@ -128,6 +131,7 @@ export function Telegraph({ user_id, userHash, websocketUrl }: TelegraphProps) {
         handleToggleChannel={handleToggleChannel}
         inAppEnabled={inAppEnabled}
         emailEnabled={emailEnabled}
+        slackEnabled={slackEnabled}
       />
     )
   );
