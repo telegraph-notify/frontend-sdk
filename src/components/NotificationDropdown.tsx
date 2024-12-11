@@ -104,6 +104,7 @@ const NotificationDropdown = ({
           <Typography
             variant="subtitle1"
             sx={{ flexGrow: 1, textAlign: "center" }}
+            fontWeight="bold"
           >
             {isSettingsView ? "Settings" : "Notifications"}
           </Typography>
@@ -155,8 +156,8 @@ const NotificationDropdown = ({
                   <Box
                     sx={{
                       display: "inline-flex",
-                      width: 5,
-                      height: 5,
+                      width: 8,
+                      height: 8,
                       backgroundColor: "red",
                       borderRadius: "50%",
                       marginLeft: 1,
