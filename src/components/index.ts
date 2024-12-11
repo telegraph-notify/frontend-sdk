@@ -1,1 +1,1 @@
-export * from "./Telegraph";
+export * from "./TelegraphInbox";

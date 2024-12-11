@@ -6,13 +6,17 @@ import {
   handleReceivedData,
 } from "../utils/websocketHelpers";
 
-type TelegraphProps = {
+type TelegraphInboxProps = {
   user_id: string;
   userHash: string;
   websocketUrl: string | undefined;
 };
 
-export function Telegraph({ user_id, userHash, websocketUrl }: TelegraphProps) {
+export function TelegraphInbox({
+  user_id,
+  userHash,
+  websocketUrl,
+}: TelegraphInboxProps) {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsController, setWsController] = useState<WebSocket | null>(null);
