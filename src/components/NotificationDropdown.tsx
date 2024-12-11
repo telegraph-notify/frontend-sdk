@@ -123,7 +123,7 @@ const NotificationDropdown = ({
               onClick={(event) => handleToggleChannel(event, "in_app")}
             >
               <Checkbox checked={inAppEnabled} />
-              <ListItemText primary="In App" />
+              <ListItemText primary="In-App" />
             </MenuItem>,
             <MenuItem
               key="email"
